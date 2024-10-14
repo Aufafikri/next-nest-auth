@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model comments {
+  id        Int       @id @default(autoincrement())
+  text      String
+  createdAt DateTime? @default(now()) @db.Timestamp(6)
+  author_id Int
+  post_id   Int
+  users     users     @relation(fields: [author_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "comments_author_id_users_id_fk")
+  posts     posts     @relation(fields: [post_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "comments_post_id_posts_id_fk")
+}
+
+model groups {
+  id              Int               @id @default(autoincrement())
+  name            String
+  users_to_groups users_to_groups[]
+}
+
+model posts {
+  id        Int        @id @default(autoincrement())
+  title     String
+  content   String
+  createdAt DateTime?  @default(now()) @db.Timestamp(6)
+  author_id Int
+  comments  comments[]
+  users     users      @relation(fields: [author_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "posts_author_id_users_id_fk")
+}
+
+model profile_info {
+  id       Int    @id @default(autoincrement())
+  user_id  Int?
+  metadata Json?
+  users    users? @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "profile_info_user_id_users_id_fk")
+}
+
+model property {
+  id                    Int                     @id(map: "PK_d80743e6191258a5003d5843b4f") @default(autoincrement())
+  name                  String                  @db.VarChar
+  description           String                  @db.VarChar
+  price                 Int                     @default(0)
+  ownerId               Int?
+  typeId                Int?
+  property_type         property_type?          @relation(fields: [typeId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_19f06dc4d98fde06c69fe2feb6b")
+  user                  user?                   @relation(fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_917755242ab5b0a0b08a63016d9")
+  property_feature      property_feature?
+  user_liked_properties user_liked_properties[]
+}
+
+model property_feature {
+  id              Int       @id(map: "PK_3ba973220760cfcffe572d8c816") @default(autoincrement())
+  bedrooms        Int
+  bathrooms       Int
+  parkingSpots    Int
+  area            Int
+  hasBalcony      Boolean
+  hasGardenYard   Boolean
+  hasSwimmingPool Boolean
+  propertyId      Int?      @unique(map: "REL_84efff4da327672f4b44fc6528")
+  property        property? @relation(fields: [propertyId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_84efff4da327672f4b44fc65288")
+}
+
+model property_type {
+  id       Int        @id(map: "PK_eb483bf7f6ddf612998949edd26") @default(autoincrement())
+  value    String     @db.VarChar
+  property property[]
+}
+
+model user {
+  id                    Int                     @id(map: "PK_cace4a159ff9f2512dd42373760") @default(autoincrement())
+  firstName             String                  @db.VarChar
+  lastName              String                  @db.VarChar
+  email                 String                  @db.VarChar
+  avatarUrl             String?                 @db.VarChar
+  createdAt             DateTime                @default(now()) @db.Timestamp(6)
+  password              String                  @db.VarChar
+  role                  user_role_enum          @default(USER)
+  hashedRefreshToken    String?                 @db.VarChar
+  property              property[]
+  user_liked_properties user_liked_properties[]
+}
+
+model user_liked_properties {
+  userId     Int
+  propertyId Int
+  user       user     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "FK_423796a5a7cb7750d7d0083ff89")
+  property   property @relation(fields: [propertyId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_914ab12927d744d5dd1463dfccf")
+
+  @@id([userId, propertyId], map: "PK_89ccc12b78cd993fdf30bbf3035")
+  @@index([userId], map: "IDX_423796a5a7cb7750d7d0083ff8")
+  @@index([propertyId], map: "IDX_914ab12927d744d5dd1463dfcc")
+}
+
+model users {
+  id                 Int               @id @default(autoincrement())
+  email              String            @unique
+  name               String
+  password           String
+  hashedRefreshToken String?
+  role               Role              @default(USER)
+  comments           comments[]
+  posts              posts[]
+  profile_info       profile_info[]
+  users_to_groups    users_to_groups[]
+}
+
+model users_to_groups {
+  user_id  Int
+  group_id Int
+  groups   groups @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "users_to_groups_group_id_groups_id_fk")
+  users    users  @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "users_to_groups_user_id_users_id_fk")
+
+  @@id([user_id, group_id], map: "users_to_groups_user_id_group_id_pk")
+  @@index([user_id], map: "userIdIndex")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  USER
+}
+
+enum user_role_enum {
+  ADMIN
+  EDITOR
+  USER
+}
